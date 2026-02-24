@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu Gestor Financeiro</title>
+    <style>
+        :root { --ganho: #2e7d32; --gasto: #d32f2f; --azul: #1976d2; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; margin: 20px; }
+        .container { max-width: 900px; margin: auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 15px; margin-bottom: 20px; }
+        .saldo-box { font-size: 24px; font-weight: bold; padding: 10px 20px; border-radius: 8px; border: 1px solid #ddd; }
+        .controles { margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
+        button { padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; color: white; font-weight: bold; }
+        .btn-add { background: var(--ganho); }
+        .btn-export { background: #ff9800; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 12px; border: 1px solid #eee; text-align: left; }
+        tr.tipo-ganho { background: #e8f5e9; }
+        tr.tipo-gasto { background: #ffebee; }
+        select { padding: 8px; border-radius: 5px; border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>Gestor Financeiro</h1>
+        <div id="saldoDisplay" class="saldo-box">Saldo: R$ 0,00</div>
+    </div>
+
+    <div class="controles">
+        <select id="filtroMes" onchange="renderizarTabela()">
+            <option value="all">Todos os Meses</option>
+            <option value="1">Janeiro</option><option value="2">Fevereiro</option>
+            <option value="3">Março</option><option value="4">Abril</option>
+            <option value="5">Maio</option><option value="6">Junho</option>
+            <option value="7">Julho</option><option value="8">Agosto</option>
+            <option value="9">Setembro</option><option value="10">Outubro</option>
+            <option value="11">Novembro</option><option value="12">Dezembro</option>
+        </select>
+        <button class="btn-add" onclick="abrirModal()">+ Novo Registro</button>
+        <button class="btn-export" onclick="window.print()">Exportar PDF</button>
+    </div>
+
+    <table id="tabelaFinancas">
+        <thead>
+            <tr>
+                <th>Data</th><th>Descrição</th><th>Valor</th><th>Tipo</th><th>Categoria</th><th>Ação</th>
+            </tr>
+        </thead>
+        <tbody id="corpoTabela"></tbody>
+    </table>
+</div>
+
+<script>
+    let transacoes = JSON.parse(localStorage.getItem('financas')) || [];
+
+    function abrirModal() {
+        const desc = prompt("Descrição:");
+        const valor = parseFloat(prompt("Valor:").replace(',', '.'));
+        const tipo = prompt("Tipo (GANHO ou GASTO):").toUpperCase();
+        const cat = prompt("Categoria:");
+
+        if (desc && !isNaN(valor) && (tipo === 'GANHO' || tipo === 'GASTO')) {
+            transacoes.push({ id: Date.now(), data: new Date().toISOString().split('T')[0], desc, valor, tipo, cat });
+            salvar();
+        } else { alert("Dados inválidos!"); }
+    }
+
+    function salvar() {
+        localStorage.setItem('financas', JSON.stringify(transacoes));
+        renderizarTabela();
+    }
+
+    function excluir(id) {
+        if(confirm("Excluir registro?")) {
+            transacoes = transacoes.filter(t => t.id !== id);
+            salvar();
+        }
+    }
+
+    function renderizarTabela() {
+        const corpo = document.getElementById('corpoTabela');
+        const filtro = document.getElementById('filtroMes').value;
+        corpo.innerHTML = '';
+        let saldo = 0;
+
+        transacoes.forEach(t => {
+            const mesTransacao = new Date(t.data + "T00:00:00").getMonth() + 1;
+            if (filtro === 'all' || filtro == mesTransacao) {
+                const tr = document.createElement('tr');
+                tr.className = t.tipo === 'GANHO' ? 'tipo-ganho' : 'tipo-gasto';
+                tr.innerHTML = `
+                    <td>${t.data}</td><td>${t.desc}</td>
+                    <td>R$ ${t.valor.toFixed(2)}</td><td>${t.tipo}</td>
+                    <td>${t.cat}</td>
+                    <td><button onclick="excluir(${t.id})" style="background:red; padding:5px">X</button></td>
+                `;
+                corpo.appendChild(tr);
+                saldo += t.tipo === 'GANHO' ? t.valor : -t.valor;
+            }
+        });
+
+        const display = document.getElementById('saldoDisplay');
+        display.innerText = `Saldo: R$ ${saldo.toFixed(2)}`;
+        display.style.color = saldo < 0 ? 'red' : 'blue';
+    }
+
+    renderizarTabela();
+</script>
+
+</body>
+</html>
